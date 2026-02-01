@@ -361,7 +361,20 @@ RollQuery = "?{" prompt:QueryPrompt options:("|" QueryOption)* "}" {
 }
 
 QueryPrompt = chars:[^}|]+ { return chars.join(""); }
-QueryOption = chars:[^}]+ { return chars.join(""); }
+
+// QueryOption handles nested rollqueries by matching balanced braces
+// This allows ?{Outer|?{Inner|default}} to work correctly
+QueryOption = parts:QueryOptionPart+ { return parts.join(""); }
+
+QueryOptionPart 
+  = chars:[^{}|]+ { return chars.join(""); }
+  / "{" inner:NestedContent "}" { return "{" + inner + "}"; }
+
+NestedContent = parts:NestedPart* { return parts.join(""); }
+
+NestedPart
+  = chars:[^{}]+ { return chars.join(""); }
+  / "{" inner:NestedContent "}" { return "{" + inner + "}"; }
 
 // Note: AnyRoll comes BEFORE RollQuery intentionally. This ensures that when we have
 // ?{...}d10, the DiceRoll rule (inside AnyRoll via FullRoll) matches the entire expression,
