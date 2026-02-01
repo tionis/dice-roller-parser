@@ -273,7 +273,7 @@ PercentExpr = ("%") {
 	}
 }
 
-RollExpr = BracketExpression / Integer;
+RollExpr = BracketExpression / RollQuery / Integer;
 
 Expression = InlineExpression / AddSubExpression / BracketExpression;
 

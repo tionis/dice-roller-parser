@@ -259,7 +259,7 @@ export interface FateExpr extends ParsedType {
 }
 
 /** A combination of a number or value that is not an expression. Used as a helper for type combinations */
-export type RollExpr = MathExpression | NumberType;
+export type RollExpr = MathExpression | NumberType | RollQueryType;
 
 /** A combination of expression types. Used as a helper for type combinations */
 export type Expression = InlineExpression | MathExpression;
