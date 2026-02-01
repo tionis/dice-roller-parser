@@ -12,6 +12,10 @@ export class DiscordRollRenderer {
 	}
 
 	private doRender(roll: RollBase, root = false) {
+		if (!roll) {
+			throw new Error("Unable to render: roll object is null/undefined");
+		}
+		
 		let render = "";
 
 		const type = roll.type;
@@ -46,7 +50,7 @@ export class DiscordRollRenderer {
 			case "fate":
 				return `F`;
 			default:
-				throw new Error("Unable to render");
+				throw new Error(`Unable to render type: ${type}`);
 		}
 
 		if (!roll.valid) {

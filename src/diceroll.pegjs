@@ -363,7 +363,11 @@ RollQuery = "?{" prompt:QueryPrompt options:("|" QueryOption)* "}" {
 QueryPrompt = chars:[^}|]+ { return chars.join(""); }
 QueryOption = chars:[^}]+ { return chars.join(""); }
 
-FunctionOrRoll = MathFnExpression / RollQuery / AnyRoll / BracketExpression
+// Note: AnyRoll comes BEFORE RollQuery intentionally. This ensures that when we have
+// ?{...}d10, the DiceRoll rule (inside AnyRoll via FullRoll) matches the entire expression,
+// rather than RollQuery matching just ?{...} and leaving "d10" as unconsumed input.
+// Standalone rollqueries (like ?{value|5}) will still work since AnyRoll won't match them.
+FunctionOrRoll = MathFnExpression / AnyRoll / RollQuery / BracketExpression
 
 Integer "integer" = "-"? [0-9]+ {
 	const num = parseInt(text(), 10);
