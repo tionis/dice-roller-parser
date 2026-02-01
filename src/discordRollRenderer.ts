@@ -75,13 +75,16 @@ export class DiscordRollRenderer {
 			return `{ ${replies.join(" + ")} } = ${group.value}`;
 		}
 
-		const reply = this.stripBrackets(replies[0]);
+		let reply = this.stripBrackets(replies[0]);
 		
 		// Avoid redundant "= value" when the inner die already shows the same value
 		// This happens with success-counting rolls in groups like {4d10cs>7}
 		// which would otherwise show "{ 6, 11, 9, 5 = 2 } = 2"
+		// Strip the inner "= X" suffix when values match
 		if (group.dice.length === 1 && group.dice[0].value === group.value) {
-			return `{ ${reply} }`;
+			// Remove the trailing " = X" or " = X Matches" from the inner render
+			reply = reply.replace(/ = \d+( Match(es)?)?$/, '');
+			return `{ ${reply} } = ${group.value}`;
 		}
 		
 		return `{ ${reply} } = ${group.value}`;
