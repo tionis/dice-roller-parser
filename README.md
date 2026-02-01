@@ -150,6 +150,42 @@ console.log(`Final roll value: ${roll.Value}`);
 
 See the [parsed roll output](#parsed-roll-output) in the [output types](#output-types) section below for more details on the returned object.
 
+##### Extracting Roll Queries
+
+Roll queries are placeholders in dice formulas that prompt users for input, following the Roll20 format `?{prompt|default}`. The `getQueries` method extracts all query prompts from a formula string, allowing you to build interactive dice rolling interfaces.
+
+```javascript
+// Extract queries from a formula
+const queries = roller.getQueries("?{Dice Pool|5}d10>7");
+console.log(queries);
+// Output: [{ prompt: "Dice Pool", options: ["5"] }]
+
+// Multiple queries
+const queries = roller.getQueries("?{Attack}d20+?{Modifier|0}");
+console.log(queries);
+// Output: [
+//   { prompt: "Attack", options: [] },
+//   { prompt: "Modifier", options: ["0"] }
+// ]
+
+// Query with multiple options (dropdown)
+const queries = roller.getQueries("?{Damage Type|Fire|Cold|Lightning}d6");
+console.log(queries);
+// Output: [{ prompt: "Damage Type", options: ["Fire", "Cold", "Lightning"] }]
+```
+
+##### Rolling with Context Values
+
+When your formula contains queries, you can pass a context object to substitute the query values:
+
+```javascript
+// Create roller with context
+const context = { "Dice Pool": "8" };
+const roller = new DiceRoller(undefined, undefined, context);
+const roll = roller.roll("?{Dice Pool|5}d10>7");
+// Rolls 8d10>7 instead of prompting
+```
+
 ### `DiscordRollRenderer`
 
 The `DiscordRollRenderer` class is an example renderer class that takes a rolled input represented by a [`RollBase`](#RollBase) object and renders it to a string in a markdown format, compatible with Discord.

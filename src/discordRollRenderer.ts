@@ -76,6 +76,14 @@ export class DiscordRollRenderer {
 		}
 
 		const reply = this.stripBrackets(replies[0]);
+		
+		// Avoid redundant "= value" when the inner die already shows the same value
+		// This happens with success-counting rolls in groups like {4d10cs>7}
+		// which would otherwise show "{ 6, 11, 9, 5 = 2 } = 2"
+		if (group.dice.length === 1 && group.dice[0].value === group.value) {
+			return `{ ${reply} }`;
+		}
+		
 		return `{ ${reply} } = ${group.value}`;
 	}
 
