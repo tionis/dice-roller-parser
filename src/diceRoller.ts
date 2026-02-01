@@ -10,6 +10,14 @@ import {
 
 // TODO: [[ {[[1d6]], 5}kh1 ]] fails due to white space "[[ {" - perhaps add .?* to pegjs file to allow optional spaces
 
+/** Represents a roll query prompt extracted from a formula */
+export interface RollQueryPrompt {
+	/** The prompt text shown to the user */
+	prompt: string;
+	/** Default value options for this prompt */
+	options: string[];
+}
+
 export class DiceRoller {
 	public randFunction: () => number = Math.random;
 	public maxRollCount = 1000;
@@ -37,6 +45,46 @@ export class DiceRoller {
 	 */
 	public parse(input: string): RootType {
 		return parser.parse(input);
+	}
+
+	/**
+	 * Extracts all roll query prompts from a formula string
+	 * @param input The formula string to extract queries from
+	 * @returns Array of unique roll query prompts found in the formula
+	 */
+	public getQueries(input: string): RollQueryPrompt[] {
+		const root = this.parse(input);
+		const queries: RollQueryPrompt[] = [];
+		const seen = new Set<string>();
+
+		const walk = (node: unknown): void => {
+			if (!node || typeof node !== 'object') return;
+			
+			const obj = node as Record<string, unknown>;
+			
+			if (obj.type === "rollquery") {
+				const query = obj as unknown as RollQueryType;
+				if (!seen.has(query.prompt)) {
+					seen.add(query.prompt);
+					queries.push({
+						prompt: query.prompt,
+						options: query.options || []
+					});
+				}
+			}
+			
+			// Recursively walk all object properties and arrays
+			Object.values(obj).forEach(value => {
+				if (Array.isArray(value)) {
+					value.forEach(walk);
+				} else {
+					walk(value);
+				}
+			});
+		};
+
+		walk(root);
+		return queries;
 	}
 
 	/**
