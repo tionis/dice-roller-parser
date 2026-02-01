@@ -2,10 +2,10 @@
 const parser = require("./diceroll.js");
 import {
 	RootType, DiceRoll, NumberType, InlineExpression, RollExpressionType, MathType, GroupedRoll, SortRollType, SuccessFailureCritModType,
-	ReRollMod, FullRoll, ParsedType, MathExpression, KeepDropModType, SuccessFailureModType, MathFunctionExpression
+	ReRollMod, FullRoll, ParsedType, MathExpression, KeepDropModType, SuccessFailureModType, MathFunctionExpression, RollQueryType, DoubleSuccessMod, TargetMod
 } from "./parsedRollTypes";
 import {
-	RollBase, DiceExpressionRoll, GroupRoll, DiceRollResult, DieRollBase, ExpressionRoll, DieRoll, FateDieRoll, GroupedRollBase, MathFunctionRoll
+	RollBase, DiceExpressionRoll, GroupRoll, DiceRollResult, DieRollBase, ExpressionRoll, DieRoll, FateDieRoll, GroupedRollBase, MathFunctionRoll, RollQueryRoll
 } from "./rollTypes";
 
 // TODO: [[ {[[1d6]], 5}kh1 ]] fails due to white space "[[ {" - perhaps add .?* to pegjs file to allow optional spaces
@@ -13,18 +13,21 @@ import {
 export class DiceRoller {
 	public randFunction: () => number = Math.random;
 	public maxRollCount = 1000;
+	public ctx: Record<string, string | number> = {};
 
 	/**
 	 * The DiceRoller class that performs parsing and rolls of {@link https://wiki.roll20.net/Dice_Reference roll20 format} input strings
 	 * @constructor
 	 * @param randFunction The random number generator function to use when rolling, default: Math.random
 	 * @param maxRolls The max number of rolls to perform for a single die, default: 1000
+	 * @param ctx The context object for query values
 	 */
-	constructor(randFunction?: () => number, maxRolls = 1000) {
+	constructor(randFunction?: () => number, maxRolls = 1000, ctx: Record<string, string | number> = {}) {
 		if (randFunction) {
 			this.randFunction = randFunction;
 		}
 		this.maxRollCount = maxRolls;
+		this.ctx = ctx;
 	}
 
 	/**
@@ -83,6 +86,9 @@ export class DiceRoller {
 			case "mathfunction":
 				response = this.rollFunction(input as MathFunctionExpression);
 				break;
+			case "rollquery":
+				response = this.rollQuery(input as RollQueryType);
+				break;
 			case "inline":
 				response = this.rollType((input as InlineExpression).expr);
 				break;
@@ -105,6 +111,50 @@ export class DiceRoller {
 		}
 
 		return response;
+	}
+
+	private rollQuery(input: RollQueryType): RollQueryRoll {
+        // Look up value in context (ctx)
+        // If not found, use default (options[0]) or 0
+        // If default is provided, it might need parsing/rolling too if it's an expression?
+        // For simplicity, we assume the context provides the RESOLVED number value.
+        // Wait, roll20 allows "1d6" as a default.
+        // So we might need to parse the *value* we get back.
+        
+        const valueStr = this.ctx[input.prompt] !== undefined 
+            ? String(this.ctx[input.prompt]) 
+            : (input.options && input.options.length > 0 ? input.options[0] : "0");
+
+        // Parse/Roll the value string recursively
+        // This handles inputs like "5" or "1d6" or "10"
+        let value = 0;
+        try {
+            // Avoid infinite recursion if value is same as prompt? No, value is string.
+            // Parse the *value* as a new roll
+            // CAUTION: This creates a new parser instance effectively? 
+            // We can reuse this.roll() but it parses string.
+            
+            // If the value is a pure number, we can skip parsing overhead
+            if (/^-?\d+(\.\d+)?$/.test(valueStr)) {
+                value = parseFloat(valueStr);
+            } else {
+                value = this.rollValue(valueStr);
+            }
+        } catch (e) {
+            value = 0; // Fallback
+        }
+
+		return {
+			type: "rollquery",
+			prompt: input.prompt,
+			options: input.options,
+			success: null,
+			successes: 0,
+			failures: 0,
+			valid: true,
+			value: value,
+			order: 0,
+		}
 	}
 
 	private rollDiceExpr(input: RollExpressionType): DiceExpressionRoll {
@@ -428,6 +478,8 @@ export class DiceRoller {
 				return this.getReRollMethod((mod as ReRollMod));
 			case "rerollOnce":
 				return this.getReRollOnceMethod((mod as ReRollMod));
+			case "doublesuccess":
+				return this.getDoubleSuccessMethod((mod as DoubleSuccessMod));
 			default:
 				throw new Error(`Mod ${mod.type} is not recognised`);
 		}
@@ -723,6 +775,31 @@ export class DiceRoller {
 
 			return rolls;
 		}
+	}
+
+	private getDoubleSuccessMethod(mod: DoubleSuccessMod) {
+		const targetMethod = mod.target
+			? this.successTest.bind(null, mod.target.mod, this.rollType(mod.target.value).value)
+			: this.successTest.bind(null, "=", 10); // Default to 10 if not specified
+
+		return (rolls: DieRollBase[]) => {
+			return rolls.map((roll) => {
+				if (!roll.valid) return roll;
+				
+				// If it matches the Double Success criteria, add another success
+				// We assume 'ds' is used IN ADDITION to '>' (success) or we handle it here.
+				// For robustness: we just check if it matches, and if so, increment successes.
+				// This allows "5d10>7ds10" -> 7,8,9=1, 10=2.
+				if (targetMethod(roll.roll)) {
+					roll.successes += 1;
+                    // Ensure value tracks successes if we are in success-counting mode
+                    if (roll.success) { 
+                        roll.value = roll.successes - roll.failures; 
+                    }
+				}
+				return roll;
+			});
+		};
 	}
 
 	private successTest(mod: string, target: number, roll: number) {

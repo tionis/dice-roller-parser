@@ -16,6 +16,7 @@ export type ParsedObjectType = "number"
 	| "penetrate"
 	| "reroll"
 	| "rerollOnce"
+	| "doublesuccess"
 	| "target"
 	| "die"
 	| "fate"
@@ -24,7 +25,20 @@ export type ParsedObjectType = "number"
 	| "math"
 	| "crit"
 	| "critfail"
+	| "rollquery"
 	| "mathfunction";
+
+// ... (ParsedType) ...
+
+/**
+ * A roll query input
+ * @example ?{Prompt|Default}
+ */
+export interface RollQueryType extends RootType {
+	type: "rollquery";
+	prompt: string;
+	options?: string[];
+}
 
 /** The base interface for all parsed types */
 export interface ParsedType {
@@ -167,13 +181,19 @@ export type RollExpression = RollExpressionType | RollOrExpression;
 /** A combination of a roll, or a math expression. Used as a helper for type combinations */
 export type RollOrExpression = FullRoll | Expression;
 
+export interface DoubleSuccessMod extends ParsedType {
+	type: "doublesuccess";
+	target?: TargetMod;
+}
+
 /**
  * A roll object including the dice roll, and any modifiers
  * @example 2d6kh1
  */
 export interface FullRoll extends DiceRoll {
 	/** Any modifiers attached to the roll */
-	mods?: (ReRollMod | KeepDropModType)[];
+	mods?: (ReRollMod | KeepDropModType | DoubleSuccessMod)[];
+
 	/** Any success or failure targets for the roll */
 	targets?: (SuccessFailureCritModType)[]
 	/** Any match modifiers for the roll */

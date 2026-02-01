@@ -9,7 +9,19 @@ export type RollType = "number"
 	| "die"
 	| "roll"
 	| "fateroll"
+	| "rollquery"
 	| "mathfunction";
+
+// ... (RollBase) ...
+
+/**
+ * A roll query result (requires user input)
+ */
+export interface RollQueryRoll extends RollBase {
+	type: "rollquery";
+	prompt: string;
+	options?: string[];
+}
 
 /** The base class for all die rolls, extended based upon the type property */
 export interface RollBase {

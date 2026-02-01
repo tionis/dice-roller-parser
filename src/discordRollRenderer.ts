@@ -1,4 +1,4 @@
-import { RollBase, DiceExpressionRoll, GroupRoll, DiceRollResult, ExpressionRoll, DieRoll, FateDieRoll, MathFunctionRoll } from "./rollTypes";
+import { RollBase, DiceExpressionRoll, GroupRoll, DiceRollResult, ExpressionRoll, DieRoll, FateDieRoll, MathFunctionRoll, RollQueryRoll } from "./rollTypes";
 
 /** An example renderer class that renders a roll to a string in a markdown format, compatible with Discord */
 export class DiscordRollRenderer {
@@ -32,6 +32,8 @@ export class DiscordRollRenderer {
 			case "mathfunction":
 				render = this.renderFunction(roll as MathFunctionRoll);
 				break;
+			case "rollquery":
+				return (roll as RollQueryRoll).value.toString();
 			case "roll":
 				return this.renderRoll(roll as DieRoll);
 			case "fateroll":
@@ -153,7 +155,7 @@ export class DiscordRollRenderer {
 		let rollDisplay = `${roll.roll}`;
 		if (!roll.valid) {
 			rollDisplay = `~~${roll.roll}~~`;
-		} else if (roll.success && roll.value === 1) {
+		} else if (roll.success && roll.value >= 1) { // Changed === 1 to >= 1
 			rollDisplay = `**${roll.roll}**`;
 		} else if (roll.success && roll.value === -1) {
 			rollDisplay = `*${roll.roll}*`;

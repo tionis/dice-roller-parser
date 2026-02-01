@@ -191,9 +191,16 @@ SortMod = "s" dir:("a" / "d")? {
 	}
 }
 
-RolledModRoll = head:DiceRoll tail:(CompoundRoll / PenetrateRoll / ExplodeRoll / ReRollOnceMod / ReRollMod)* {
+RolledModRoll = head:DiceRoll tail:(CompoundRoll / PenetrateRoll / ExplodeRoll / ReRollOnceMod / ReRollMod / DoubleSuccessMod)* {
 	head.mods = (head.mods || []).concat(tail);
 	return head;
+}
+
+DoubleSuccessMod = "ds" target:TargetMod? {
+	return {
+		type: "doublesuccess",
+		target
+	}
 }
 
 ExplodeRoll = "!" target:TargetMod? {
@@ -345,7 +352,18 @@ MathFnExpression = op:MathFunction _ "(" _ expr:AddSubExpression _ ")" {
 	};
 }
 
-FunctionOrRoll = MathFnExpression / AnyRoll / BracketExpression
+RollQuery = "?{" prompt:QueryPrompt options:("|" QueryOption)* "}" {
+	return {
+		type: "rollquery",
+		prompt: prompt,
+		options: options.map((o) => o[1])
+	}
+}
+
+QueryPrompt = chars:[^}|]+ { return chars.join(""); }
+QueryOption = chars:[^}]+ { return chars.join(""); }
+
+FunctionOrRoll = MathFnExpression / RollQuery / AnyRoll / BracketExpression
 
 Integer "integer" = "-"? [0-9]+ {
 	const num = parseInt(text(), 10);
