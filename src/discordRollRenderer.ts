@@ -96,32 +96,10 @@ export class DiscordRollRenderer {
 	}
 
 	private renderDie(die: DiceRollResult) {
-		// Group exploding dice chains together
-		// When a die explodes, it and subsequent explosions should be grouped like {10, 8, 3}
 		const renderedRolls: string[] = [];
-		let explosionChain: string[] = [];
 		
-		for (let i = 0; i < die.rolls.length; i++) {
-			const roll = die.rolls[i];
-			const rendered = this.doRender(roll);
-			
-			if (roll.explode) {
-				// This roll exploded, start or continue a chain
-				explosionChain.push(rendered);
-			} else if (explosionChain.length > 0) {
-				// This roll is the end of an explosion chain (the final non-exploding roll)
-				explosionChain.push(rendered);
-				renderedRolls.push(`{${explosionChain.join(", ")}}`);
-				explosionChain = [];
-			} else {
-				// Normal roll, no explosion
-				renderedRolls.push(rendered);
-			}
-		}
-		
-		// Handle any remaining explosion chain (shouldn't happen normally, but just in case)
-		if (explosionChain.length > 0) {
-			renderedRolls.push(`{${explosionChain.join(", ")}}`);
+		for (const roll of die.rolls) {
+			renderedRolls.push(this.doRender(roll));
 		}
 
 		let reply = `${renderedRolls.join(", ")}`;
